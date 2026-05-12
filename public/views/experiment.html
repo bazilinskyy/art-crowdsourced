@@ -1,0 +1,903 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Experiment page</title>
+    <!-- jquery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <!-- jspsych -->
+    <script src="jspsych/jspsych.js"></script>
+    <link href="jspsych/jspsych.css" rel="stylesheet" type="text/css" />
+    <script src="jspsych/plugin-fullscreen.js"></script>
+    <script src="jspsych/plugin-html-keyboard-response.js"></script>
+    <script src="jspsych/plugin-instructions.js"></script>
+    <script src="jspsych/plugin-call-function.js"></script>
+    <script src="jspsych/plugin-survey-html-form-slider.js"></script>
+    <script src="jspsych/plugin-html-slider-response.js"></script>
+    <script src="jspsych/plugin-preload.js"></script>
+    <script src="jspsych/plugin-video-keyboard-multiple-responses-release.js"></script>
+    <script src="jspsych/plugin-survey-likert.js"></script>
+    <script src="jspsych/plugin-survey-multi-choice.js"></script>
+    <!-- jspsych version of webgazer -->
+    <script src="jspsych/webgazer/webgazer.js"></script>
+    <script src="jspsych/extension-webgazer.js"></script>
+    <script src="jspsych/plugin-webgazer-init-camera.js"></script>
+    <script src="jspsych/plugin-webgazer-calibrate.js"></script>
+    <script src="jspsych/plugin-webgazer-validate.js"></script>
+    <!-- bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>
+    <!-- custom css -->
+    <link href="css/experiment.css" rel='stylesheet' type='text/css'></link>
+    <!-- favicon -->
+    <link rel='icon' type='image/png' href='img/favicon.png' />
+  </head>
+  <body>
+  </body>
+  <script>
+
+// by Pavlo Bazilinskyy <p.bazilinskyy@tue.nl>
+
+// Constants
+var videos_mv_mv_first = 0; // first videos with ego-mv (manual vehicle) and target-mv
+var videos_mv_mv_last = 20;   // last videos with ego-mv and target-mv
+var videos_mv_av_first = 21;  // first videos with ego-mv and target-av (automated)
+var videos_mv_av_last = 41;  // last videos with ego-mv and target-av
+var videos_av_mv_first = 42;  // first videos with ego-av and target-mv
+var videos_av_mv_last = 62;  // last videos with ego-av and target-mv
+var videos_av_av_first = 63;  // first videos with ego-av and target-av
+var videos_av_av_last = 83;  // last videos with ego-av and target-av
+var n_videos_per_participant = 42; // number of videos per participant
+var n_videos_repeat = 1; // number of repeats of each condition
+var image_pfefix = 'img/'; // prefix for images
+// var video_pfefix = 'https://storage.googleapis.com/trust-crowdsourced-2/video_'; // prefix for videos
+// var video_pfefix = 'https://raw.githubusercontent.com/bazilinskyy/trust-crowdsourced/main/public/videos/stimuli/video_'; // prefix for videos
+var video_pfefix = 'videos/stimuli/video_'; // prefix for videos
+var video_pfefix_local = 'videos/stimuli/video_'; // prefix for videos
+var SHOW_DEBUG = false; // switch for debugging output
+var SAVE_DATA = true; // save data or not
+var EYE_TRACKING = true; // use eye_tracking or not
+var CALIBRATION_NUM = 2; // how many times to calibrate eye tracking
+
+// Arrays
+var video_ids = [];
+var interactions = [];
+
+// browser info
+// https://stackoverflow.com/questions/11219582/how-to-detect-my-browser-version-and-operating-system-using-javascript
+var nVer = navigator.appVersion;
+var nAgt = navigator.userAgent;
+var br_name = navigator.appName;
+var br_full_version = '' + parseFloat(navigator.appVersion);
+var br_major_version = parseInt(navigator.appVersion, 10);
+var window_width = $(window).width();
+var window_height = $(window).height();
+var nameOffset, verOffset, ix;
+
+// In Opera, the true version is after "Opera" or after "Version"
+if ((verOffset = nAgt.indexOf("Opera")) != -1) {
+    br_name = "Opera";
+    br_full_version = nAgt.substring(verOffset + 6);
+    if ((verOffset = nAgt.indexOf("Version")) != -1)
+        br_full_version = nAgt.substring(verOffset + 8);
+}
+// In MSIE, the true version is after "MSIE" in userAgent
+else if ((verOffset = nAgt.indexOf("MSIE")) != -1) {
+    br_name = "Microsoft Internet Explorer";
+    br_full_version = nAgt.substring(verOffset + 5);
+}
+// In Chrome, the true version is after "Chrome" 
+else if ((verOffset = nAgt.indexOf("Chrome")) != -1) {
+    br_name = "Chrome";
+    br_full_version = nAgt.substring(verOffset + 7);
+}
+// In Safari, the true version is after "Safari" or after "Version" 
+else if ((verOffset = nAgt.indexOf("Safari")) != -1) {
+    br_name = "Safari";
+    br_full_version = nAgt.substring(verOffset + 7);
+    if ((verOffset = nAgt.indexOf("Version")) != -1)
+        br_full_version = nAgt.substring(verOffset + 8);
+}
+// In Firefox, the true version is after "Firefox" 
+else if ((verOffset = nAgt.indexOf("Firefox")) != -1) {
+    browserName = "Firefox";
+    br_full_version = nAgt.substring(verOffset + 8);
+}
+// In most other browsers, "name/version" is at the end of userAgent 
+else if ((nameOffset = nAgt.lastIndexOf(' ') + 1) <
+    (verOffset = nAgt.lastIndexOf('/'))) {
+    browserName = nAgt.substring(nameOffset, verOffset);
+    br_full_version = nAgt.substring(verOffset + 1);
+    if (browserName.toLowerCase() == browserName.toUpperCase()) {
+        browserName = navigator.appName;
+    }
+}
+// trim the br_full_version string at semicolon/space if present
+if ((ix = br_full_version.indexOf(";")) != -1)
+    br_full_version = br_full_version.substring(0, ix);
+if ((ix = br_full_version.indexOf(" ")) != -1)
+    br_full_version = br_full_version.substring(0, ix);
+
+br_major_version = parseInt('' + br_full_version, 10);
+if (isNaN(br_major_version)) {
+    br_full_version = '' + parseFloat(navigator.appVersion);
+    br_major_version = parseInt(navigator.appVersion, 10);
+}
+
+/**
+* Returns a random integer between min (inclusive) and max (inclusive).
+* The value is no lower than min (or the next integer greater than min
+* if min isn't an integer) and no greater than max (or the next integer
+* lower than max if max isn't an integer).
+* Using Math.round() will give you a non-uniform distribution!
+*/
+function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/**
+ * Shuffles array in place.
+ * @param {Array} a items An array containing the items.
+ */
+function shuffle(a) {
+    var j, x, i;
+    for (i = a.length - 1; i > 0; i--) {
+        j = Math.floor(Math.random() * (i + 1));
+        x = a[i];
+        a[i] = a[j];
+        a[j] = x;
+    }
+    return a;
+}
+
+function onlyUnique(value, index, self) { 
+    return self.indexOf(value) === index;
+}
+
+/**
+ * Get parameter from URL.
+ */
+var getUrlParameter = function getUrlParameter(sParam) {
+    var sPageURL = decodeURIComponent(window.location.search.substring(1)),
+        sURLVariables = sPageURL.split('&'),
+        sParameterName,
+        i;
+    for (i = 0; i < sURLVariables.length; i++) {
+        sParameterName = sURLVariables[i].split('=');
+        if (sParameterName[0] === sParam) {
+            return sParameterName[1] === undefined ? true : sParameterName[1];
+        }
+    }
+};
+
+// fetch from the URL param
+var debug = getUrlParameter('debug');
+// if not provided, use CONST
+if (debug == undefined) {
+    debug = SHOW_DEBUG;
+} else {
+    // convert from string to bool
+    debug = /^true$/i.test(debug);
+}
+
+if (debug) {
+    console.log('debug', debug);
+}
+
+// fetch from the URL param
+var save_data = getUrlParameter('save_data');
+// if not provided, use CONST
+if (save_data == undefined) {
+    save_data = SAVE_DATA;
+} else {
+    // convert from string to bool
+    save_data = /^true$/i.test(save_data);
+}
+
+if (debug) {
+    console.log('save_data', save_data);
+}
+
+// fetch from the URL param
+var eye_tracking = getUrlParameter('eye_tracking');
+// if not provided, use CONST
+if (eye_tracking == undefined) {
+    eye_tracking = EYE_TRACKING;
+} else {
+    // convert from string to bool
+    eye_tracking = /^true$/i.test(eye_tracking);
+}
+
+if (debug) {
+    console.log('eye_tracking', eye_tracking);
+}
+
+// fetch from the URL param
+var calibration_num = getUrlParameter('calibration_num');
+// if not provided, use CONST
+if (calibration_num == undefined) {
+    calibration_num = CALIBRATION_NUM;
+} else {
+    // convert from string to int
+    calibration_num = Number(calibration_num);
+}
+
+if (debug) {
+    console.log('calibration_num', calibration_num);
+}
+
+/**
+ * Get code for the worker.
+ */
+function getWorkerCode() {
+    // fetch from the URL param
+    var worker_code = getUrlParameter('worker_code');
+    // if not provided, generate
+    if (worker_code == undefined) {
+        var timestamp = window.performance.timing.navigationStart + window.performance.now();
+        var current_time = Math.round(timestamp);
+        var random_num = getRandomInt(1, 10000);
+        worker_code = 'R5' + current_time + 'JF' + random_num + '7X';
+        return worker_code;
+    } else {
+        return worker_code;
+    }
+    
+}
+
+var worker_code = getWorkerCode();
+if (debug) {
+    console.log('worker_code', worker_code);
+}
+
+/**
+ * Get participant group.
+ */
+function getParticipantGroup() {
+    // fetch from the URL param
+    var participant_group = getUrlParameter('participant_group');
+    // if not provided, generate
+    if (participant_group == undefined) {
+        return getRandomInt(0, 3);
+    } else {
+        return Number(participant_group);
+    }
+    
+}
+
+var participant_group = getParticipantGroup();
+if (debug) {
+    console.log('participant_group', participant_group);
+}
+
+/**
+ * Initialise jsPsych.
+ */
+var jsPsych = initJsPsych({
+    on_finish: function() {
+        window.location = 'finish?work=' + worker_code;
+    },
+    on_interaction_data_update: function(data) {
+        interactions.push(data)
+    },
+    extensions: [
+        {type: jsPsychExtensionWebgazer}
+    ]
+});
+
+/**
+ * Save data.
+ */
+function saveData() {
+    // check if data needs to be saved
+    if (save_data) {
+        // add worker ID and browser interactions
+        jsPsych.data.get().addToLast({
+            worker_code: worker_code,
+            interactions: interactions,
+            window_width: $(window).width(),
+            window_height: $(window).height()
+        });
+        interactions = [];  // reset interactions
+
+        if (debug) {
+            console.log('saving data', jsPsych.data.get().json());
+        }
+        $.ajax({
+                type: 'POST',
+                url: '/experiment-data',
+                data: jsPsych.data.get().json(),
+                contentType: 'application/json'
+            })
+            .done(function() {
+                jsPsych.data.reset();
+            })
+            .fail(function() {
+                alert('A problem occurred while writing to the database. Please contact the researcher for more information.')
+                window.location = '/';
+            })
+        if (debug) {
+            console.log('data saved');
+        }
+    }
+}
+
+if (debug) {
+    console.log('browser name', br_name);
+    console.log('browser full version', br_full_version);
+    console.log('browser major version', br_major_version);
+    console.log('browser navigator.appName', navigator.appName);
+    console.log('browser navigator.userAgent', navigator.userAgent);
+    console.log('window width initial', window_width);
+    console.log('window height initial', window_height);
+}
+
+// Arrays for storing data
+var between_blocks = []; // instructions between blocks
+var video_stimuli = []; // blocks with videos
+
+// choose correct video stimuli
+video_ids_0 = [];  // placeholder for videos of first batch
+video_ids_1 = [];  // placeholder for videos of second batch
+if (participant_group == 0) {  // group 0
+   // ego-mv - target-mv
+    for (var i = videos_mv_mv_first; i <= videos_mv_mv_last; i++) {
+        for (var j = 0; j < n_videos_repeat; j++) {
+            video_ids_0.push(i);
+        }
+    }
+    video_ids_0 = shuffle(video_ids_0);  // shuffle video IDs
+    // ego-mv - target-av
+    for (var i = videos_mv_av_first; i <= videos_mv_av_last; i++) {
+        for (var j = 0; j < n_videos_repeat; j++) {
+            video_ids_1.push(i);
+        }
+    }
+    video_ids_1 = shuffle(video_ids_1);  // shuffle video IDs
+} else if (participant_group == 1) { // group 1
+    // ego-mv - target-av
+    for (var i = videos_mv_av_first; i <= videos_mv_av_last; i++) {
+        for (var j = 0; j < n_videos_repeat; j++) {
+            video_ids_0.push(i);
+        }
+    }
+    video_ids_0 = shuffle(video_ids_0);  // shuffle video IDs
+    // ego-mv - target-mv
+    for (var i = videos_mv_mv_first; i <= videos_mv_mv_last; i++) {
+        for (var j = 0; j < n_videos_repeat; j++) {
+            video_ids_1.push(i);
+        }
+    }
+    video_ids_1 = shuffle(video_ids_1);  // shuffle video IDs
+} else if (participant_group == 2) {  // group 2
+    // ego-av - target-mv
+    for (var i = videos_av_mv_first; i <= videos_av_mv_last; i++) {
+        for (var j = 0; j < n_videos_repeat; j++) {
+            video_ids_0.push(i);
+        }
+    }
+    video_ids_0 = shuffle(video_ids_0);  // shuffle video IDs
+    // ego-av - target-av
+    for (var i = videos_av_av_first; i <= videos_av_av_last; i++) {
+        for (var j = 0; j < n_videos_repeat; j++) {
+            video_ids_1.push(i);
+        }
+    }
+    video_ids_1 = shuffle(video_ids_1);  // shuffle video IDs
+} else if (participant_group == 3) {  // group 3
+    // ego-av - target-av
+    for (var i = videos_av_av_first; i <= videos_av_av_last; i++) {
+        for (var j = 0; j < n_videos_repeat; j++) {
+            video_ids_0.push(i);
+        }
+    }
+    video_ids_0 = shuffle(video_ids_0);  // shuffle video IDs
+    // target-av
+    for (var i = videos_av_mv_first; i <= videos_av_mv_last; i++) {
+        for (var j = 0; j < n_videos_repeat; j++) {
+            video_ids_1.push(i);
+        }
+    }
+    video_ids_1 = shuffle(video_ids_1);  // shuffle video IDs
+} else { // negative = ego_av
+    console.log('wrong participant_group id of ', participant_group);
+}
+video_ids = video_ids_0.concat(video_ids_1);  // shuffle ids
+
+// define instructions block
+var instructions_block_av = {
+    type: jsPsychInstructions,
+    pages: [
+        '<div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Introduction</h1><p class="lead">In the experiment, you will view a total ' + n_videos_per_participant + ' videos, which are divided into two sessions. Each session consists ' + n_videos_per_participant / 2 + ' videos.</p><p class="lead">You will watch the videos from the perspective of the passenger in an <span style="font-weight: bold;">automated*</span> car. You will also see blue overlay on the windows of "your car", which means your car is operating in an <span style="font-weight: bold;">automated*</span> manner. See the image below.</p></br><div class="container"><div class="row"><div class="col"><img src=\'' + image_pfefix + 'ego_av_8500ms.jpg\'/ style="width: 60%; margin: auto; display: block;"></div></div><div class="row"><div class="col"><p class="text-center">Your view.</p></div></div></div></p><p>* Please note that in this study, the term "automated" refers to the state where the car driving system is taking control and operating without direct human intervention.</p><hr><p>Press \'Next\' to proceed to the next page of instructions.</p></div></div>', //participants' view
+        '<div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">White cars</h1><p class="lead">Each scenario will have one or more white car(s). See the image below. Please <span style="font-weight: bold;">pay attention to their behaviour.</span></p><p class="lead">After each video, you will answer questions on how you feel about the behaviour of the white car(s).</p><div class="container"><div class="row"><div class="col"><img src=\'' + image_pfefix + 'white_mv_ego_av_8500ms.jpg\'/ style="width: 60%; margin: auto; display: block;"></div></div><div class="row"><div class="col"><p class="text-center">The white car.</p></div></div></div></p><hr><p>Press \'Next\' to proceed to the next page of instructions.</p></div></div>',//white car intro and what pps are supposed to do
+        '<div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Driving mode of the white cars</h1><p class="lead">In <strong>some of the videos</strong>, the white car(s) will also have blue overlay on the windows (see the images below with the white cars), which indicates that in those scenarios, the white car is operating in an <span style="font-weight: bold;">automated</span> manner.<p class="lead">Please pay attention to the driving mode of the target car during the experiment.</p><div class="container"><div class="row"><div class="col"><img src=\'' + image_pfefix + 'white_mv_ego_av_8500ms.jpg\'/ style="width: 100%"></div><div class="col"><img src=\'' + image_pfefix + 'white_av_ego_av_8500ms.jpg\'/ style="width: 100%"></div></div><div class="row"><div class="col"><p class="text-center">The white car drives manually (left) and the white car operates in an automated manner (right).</p></div></div></div></p><hr><p>Press \'Next\' to proceed to the next page of instructions.</p></div></div>',//blue overlay
+        '<div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Red cars</h1><p class="lead">Other cars are all in red colour to let the white car(s) stand out. See the image below.</br><div class="container"><div class="row"><div class="col"><img src=\'' + image_pfefix + 'red_ego_av_8500ms.jpg\'/ style="width: 60%; margin: auto; display: block;"></div></div><div class="row"><div class="col"><p class="text-center">Red cars.</p></div></div></div></p><hr><p>Press \'Next\' to proceed to the next page of instructions.</p></div></div>',//red car
+        '<div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Task description</h1><p class="lead">1. Please imagine that you are the passenger in the automated car in all the videos you will watch.</p><p class="lead">2. Each video starts with a black screen. As soon as you see the black screen, <span style="font-weight: bold;">PRESS \'F\' key to start the video</span>.</p><p class="lead">3. After the video starts, <span style="font-weight: bold;">PRESS and HOLD \'F\' key</span> when you experience any <span style="font-weight: bold;">discomfort</span> with the <span style="font-weight: bold;">traffic situation</span>, and release it when you feel comfortable again. You can press and release the key as many times as you want per video.</p><p class="lead">4. After each video, you will answer questions about the behaviour of the <span style="font-weight: bold;">white car(s)</span> based on your feelings.</p><p>The window of your browser should be at least 1300px wide and 800px tall.</p><hr><p>Press \'Next\' to proceed to the next page of instructions.</p></div></div>',//tasks
+        '<div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Test trial</h1><p class="lead">In the next phase, you will encounter two test trials. Each trial contains one video and multiple questions. These test trials provide you with an opportunity to become familiar with the tasks you will be required to perform.</p><p class="lead">During the test trials, please also:<ol><li>Adjust the volume level until you can hear the sound of the video well.</li><li>Adjust the brightness of the screen until you can see the video clearly.</li></ol></p><hr><p>Press \'Next\' to proceed to the next page of instructions.</p></div></div>'
+    ],
+    show_clickable_nav: true,
+    data: {
+        browser_name: br_name,
+        browser_full_version: br_full_version,
+        browser_major_version: br_major_version,
+        browser_app_name: navigator.appName,
+        browser_user_agent: navigator.userAgent,
+        video_ids: video_ids,
+        window_height_init: window_height,
+        window_width_init: window_width,
+        worker_code: worker_code,
+        participant_group: participant_group
+    }
+}
+
+var test_trial_av_0 = {
+    type: jsPsychVideoKeyboardMultipleResponsesRelease,
+    autoplay: true,
+    controls: false,
+    trial_ends_after_video: true,
+    width: 1280,
+    // height: 720,
+    choices: ['F'],
+    stimulus: [video_pfefix_local + 'test_av_0.mp4'],
+    prompt: '<p>PRESS and HOLD \'F\' key when you experience any <span style="font-weight: bold;">discomfort</span> with the <span style="font-weight: bold;">traffic situation</span>. Release it when you feel comfortable again.</br>When you are ready, press \'F\' key to start the video.</p>',
+    extensions: [
+      {
+        type: jsPsychExtensionWebgazer, 
+        params: {targets: ['#jspsych-image-keyboard-response-stimulus']}
+      }
+    ]
+}
+var test_trial_av_1 = {
+    type: jsPsychVideoKeyboardMultipleResponsesRelease,
+    autoplay: true,
+    controls: false,
+    trial_ends_after_video: true,
+    width: 1280,
+    // height: 720,
+    choices: ['F'],
+    stimulus: [video_pfefix_local + 'test_av_1.mp4'],
+    prompt: '<p>PRESS and HOLD \'F\' key when you experience any <span style="font-weight: bold;">discomfort</span> with the <span style="font-weight: bold;">traffic situation</span>. Release it when you feel comfortable again.</br>When you are ready, press \'F\' key to start the video.</p>',
+    extensions: [
+      {
+        type: jsPsychExtensionWebgazer, 
+        params: {targets: ['#jspsych-image-keyboard-response-stimulus']}
+      }
+    ]
+}
+
+// define instructions block
+var instructions_block_mv = {
+    type: jsPsychInstructions,
+    pages: [
+        '<div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Introduction</h1><p class="lead">In the experiment, you will view a total ' + n_videos_per_participant + ' videos, which are divided into two sessions. Each session consists ' + n_videos_per_participant / 2 + ' videos.</p><p class="lead">You will see videos from the perspective of the driver in a <span style="font-weight: bold;">manually driven car</span>. See the image below.</br><div class="container"><div class="row"><div class="col"><img src=\'' + image_pfefix + 'ego_mv_8500ms.jpg\'/ style="width: 60%; margin: auto; display: block;"></div></div><div class="row"><div class="col"><p class="text-center">Your view.</p></div></div></div></p><hr><p>Press \'Next\' to proceed to the next page of instructions.</p></div></div>',
+        '<div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">White cars</h1><p class="lead">Each scenario will have one or more white car(s). See the image below. Please <span style="font-weight: bold;">pay attention to their behaviour.</span></p><p class="lead">After each video, you will answer questions on how you feel about the behaviour of the white car(s).</p><div class="container"><div class="row"><div class="col"><img src=\'' + image_pfefix + 'white_mv_ego_mv_8500ms.jpg\'/ style="width: 60%; margin: auto; display: block;"></div></div><div class="row"><div class="col"><p class="text-center">The white car.</p></div></div></div></p><hr><p>Press \'Next\' to proceed to the next page of instructions.</p></div></div>',//white car intro and what pps are supposed to do
+        '<div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Driving mode of the white cars</h1><p class="lead">In <strong>some of the videos</strong>, the white car(s) will have blue overlay on the windows (see the images below with the white cars), which indicates that in those scenarios, the white car is operating in an <span style="font-weight: bold;">automated*</span> manner.<p class="lead">Please pay attention to the driving mode of the target car during the experiment.</p><div class="container"><div class="row"><div class="col"><img src=\'' + image_pfefix + 'white_mv_ego_mv_8500ms.jpg\'/ style="width: 100%"></div><div class="col"><img src=\'' + image_pfefix + 'white_av_ego_mv_8500ms.jpg\'/ style="width: 100%"></div></div><div class="row"><div class="col"><p class="text-center">The white car drives manually (left) and the white car operates in an automated manner(right)</p></div></div></div></p><p>* Please note that in this study, the term "automated" refers to the state where the car driving system is taking control and operating without direct human intervention.</p><hr><p>Press \'Next\' to proceed to the next page of instructions.</p></div></div>',
+        '<div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Red cars</h1><p class="lead">Other cars are all in red colour to let the white car(s) stand out. See the image below.</br><div class="container"><div class="row"><div class="col"><img src=\'' + image_pfefix + 'red_ego_mv_8500ms.jpg\'/ style="width: 60%; margin: auto; display: block;"></div></div><div class="row"><div class="col"><p class="text-center">Red cars.</p></div></div></div></p><hr><p>Press \'Next\' to proceed to the next page of instructions.</p></div></div>',
+
+        '<div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Task description</h1><p class="lead">1. Please imagine that you are the driver in the manually driven car in all the videos you will watch.</p><p class="lead">2. Each video starts with a black screen. As soon as you see the black screen, <span style="font-weight: bold;">PRESS \'F\' key to start the video</span>.</p><p class="lead">3. After the video starts, <span style="font-weight: bold;">PRESS and HOLD \'F\' key</span> when you experience any <span style="font-weight: bold;">discomfort</span> with the <span style="font-weight: bold;">traffic situation</span>, and release it when you feel comfortable again. You can press and release the key as many times as you want per video.</p><p class="lead">4. After each video, you will answer questions about the behaviour of the <span style="font-weight: bold;">white car(s)</span> based on your feelings.</p><p>The window of your browser should be at least 1300px wide and 800px tall.</p><hr><p>Press \'Next\' to proceed to the next page of instructions.</p></div></div>',//tasks
+        '<div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Test trial</h1><p class="lead">In the next phase, you will encounter two test trials. Each trial contains one video and multiple questions. These test trials provide you with an opportunity to become familiar with the tasks you will be required to perform.</p><p class="lead">During the test trials, please also:<ol><li>Adjust the volume level until you can hear the sound of the video well.</li><li>Adjust the brightness of the screen until you can see the video clearly.</li></ol></p><hr><p>Press \'Next\' to proceed to the next page of instructions.</p></div></div>'
+    ],
+    show_clickable_nav: true,
+    data: {
+        browser_name: br_name,
+        browser_full_version: br_full_version,
+        browser_major_version: br_major_version,
+        browser_app_name: navigator.appName,
+        browser_user_agent: navigator.userAgent,
+        video_ids: video_ids,
+        window_height_init: window_height,
+        window_width_init: window_width,
+        worker_code: worker_code,
+        participant_group: participant_group
+    }
+}
+
+var test_trial_mv_0 = {
+    type: jsPsychVideoKeyboardMultipleResponsesRelease,
+    autoplay: true,
+    controls: false,
+    trial_ends_after_video: true,
+    width: 1280,
+    // height: 720,
+    choices: ['F'],
+    stimulus: [video_pfefix_local + 'test_mv_0.mp4'],
+    prompt: '<p>PRESS and HOLD \'F\' key when you experience any <span style="font-weight: bold;">discomfort</span> with the <span style="font-weight: bold;">traffic situation</span>. Release it when you feel comfortable again.</br>When you are ready, press \'F\' key to start the video.</p>',
+    extensions: [
+      {
+        type: jsPsychExtensionWebgazer, 
+        params: {targets: ['#jspsych-image-keyboard-response-stimulus']}
+      }
+    ]
+}
+var test_trial_mv_1 = {
+    type: jsPsychVideoKeyboardMultipleResponsesRelease,
+    autoplay: true,
+    controls: false,
+    trial_ends_after_video: true,
+    width: 1280,
+    // height: 720,
+    choices: ['F'],
+    stimulus: [video_pfefix_local + 'test_mv_1.mp4'],
+    prompt: '<p>PRESS and HOLD \'F\' key when you experience any <span style="font-weight: bold;">discomfort</span> with the <span style="font-weight: bold;">traffic situation</span>. Release it when you feel comfortable again.</br>When you are ready, press \'F\' key to start the video.</p>',
+    extensions: [
+      {
+        type: jsPsychExtensionWebgazer, 
+        params: {targets: ['#jspsych-image-keyboard-response-stimulus']}
+      }
+    ]
+}
+
+// define 'continue to experiment' block for ego_mv target_mv for g0
+var continue_session1_g0 = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<p>In the upcoming session, please imagine that <span style="font-weight: bold;">you are the driver in the manually driven car</span> in all the videos you will watch.</p><p>The session contains ' + n_videos_per_participant / 2 + ' videos. <span style="font-weight: bold;">All the white cars in the videos are manually driven cars</span>.</br></br>Press \'C\' to continue to the next page where the session will start.</p>',
+    choices: ['C']
+};
+// define 'continue to experiment' block for ego_mv target_av for g0
+var continue_session2_g0 = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<p>In the upcoming session, please imagine that <span style="font-weight: bold;">you are the driver in the manually driven car</span> in all the videos you will watch.</p><p>The session contains ' + n_videos_per_participant / 2 + ' videos. <span style="font-weight: bold;">All the white cars in the videos are automated cars</span> (you can see the blue overlay on their windows).</br></br>Press \'C\' to continue to the next page where the session will start.</p>',
+    choices: ['C']
+};
+// define 'continue to experiment' block for ego_mv target_av for g1
+var continue_session1_g1 = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<p>In the upcoming session, please imagine that <span style="font-weight: bold;">you are the driver in the manually driven car</span> in all the videos you will watch.</p><p>The session contains ' + n_videos_per_participant / 2 + ' videos. <span style="font-weight: bold;">All the white cars in the videos are automated cars</span> (you can see the blue overlay on their windows).</br></br>Press \'C\' to continue to the next page where the session will start.</p>',
+    choices: ['C']
+};
+// define 'continue to experiment' block for ego_mv target_mv for g1
+var continue_session2_g1 = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<p>In the upcoming session, please imagine that <span style="font-weight: bold;">you are the driver in the manually driven car</span> in all the videos you will watch.</p><p>The session contains ' + n_videos_per_participant / 2 + ' videos. <span style="font-weight: bold;">All the white cars in the videos are manually driven cars</span>.</br></br>Press \'C\' to continue to the next page where the session will start.</p>',
+    choices: ['C']
+};
+// define 'continue to experiment' block for ego_av target_mv for g2
+var continue_session1_g2 = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<p>In the upcoming session, please imagine yourself as <span style="font-weight: bold;">the passenger in the automated car</span> in all the videos you will watch.</p><p>The session contains ' + n_videos_per_participant / 2 + ' videos. <span style="font-weight: bold;">All the white cars in the videos are manually driven cars</span>.</br></br>Press \'C\' to continue to the next page where the experiment will start.</p>',
+    choices: ['C']
+};
+// define 'continue to experiment' block for ego_av target_av for g2
+var continue_session2_g2 = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<p>In the upcoming session, please imagine yourself as <span style="font-weight: bold;">the passenger in the automated car</span> in all the videos you will watch.</p><p>The session contains ' + n_videos_per_participant / 2 + ' videos. <span style="font-weight: bold;">All the white cars in the videos are automated cars</span>.</br></br>Press \'C\' to continue to the next page where the experiment will start.</p>',
+    choices: ['C']
+};
+// define 'continue to experiment' block for ego_av target_av for g3
+var continue_session1_g3 = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<p>In the upcoming session, please imagine yourself as <span style="font-weight: bold;">the passenger in the automated car</span> in all the videos you will watch.</p><p>The session contains ' + n_videos_per_participant / 2 + ' videos. <span style="font-weight: bold;">All the white cars in the videos are automated cars</span>.</br></br>Press \'C\' to continue to the next page where the experiment will start.</p>',
+    choices: ['C']
+};
+// define 'continue to experiment' block for ego_av target_mv for g3
+var continue_session2_g3 = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<p>In the upcoming session, please imagine yourself as <span style="font-weight: bold;">the passenger in the automated car</span> in all the videos you will watch.</p><p>The session contains ' + n_videos_per_participant / 2 + ' videos. <span style="font-weight: bold;">All the white cars in the videos are manually driven cars</span>.</br></br>Press \'C\' to continue to the next page where the experiment will start.</p>',
+    choices: ['C']
+};
+
+// build array with videos with stimuli
+video_preload = []; // array for preloading of videos
+// add videos from test trials to preload
+video_preload.push(video_pfefix_local + 'test_av_0.mp4');
+video_preload.push(video_pfefix_local + 'test_av_1.mp4');
+video_preload.push(video_pfefix_local + 'test_mv_0.mp4');
+video_preload.push(video_pfefix_local + 'test_mv_1.mp4');
+for (var i = 0; i < n_videos_per_participant * n_videos_repeat; i++) {
+    video_preload.push(video_pfefix + video_ids[i] + '.mp4');
+    video_stimuli.push({
+        type: jsPsychVideoKeyboardMultipleResponsesRelease,
+        autoplay: true,
+        controls: false,
+        trial_ends_after_video: true,
+        width: 1280,
+        // height: 720,
+        choices: ['F'],
+        stimulus: [video_pfefix + video_ids[i] + '.mp4'],
+        prompt: '<p>PRESS and HOLD \'F\' key when you experience any <span style="font-weight: bold;">discomfort</span> with the <span style="font-weight: bold;">traffic situation</span>. Release it when you feel comfortable again.</br>When you are ready, press \'F\' key to start the video.</p>',
+        extensions: [
+          {
+            type: jsPsychExtensionWebgazer, 
+            params: {targets: ['#jspsych-image-keyboard-response-stimulus']}
+          }
+        ]
+    });
+}
+
+// black with image to be added before each video
+var image_block = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<img src=\'' + image_pfefix + 'black_frame.png\'/ style="width: 1280px"><p>PRESS and HOLD \'F\' key when you experience any <span style="font-weight: bold;">discomfort</span> with the <span style="font-weight: bold;">traffic situation</span>. Release it when you feel comfortable again.</br>When you are ready, press \'F\' key to start the video.</p>',
+    choices: ['F'],
+};
+
+// continue before showing the image
+var continue_block = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<p>Press \'C\' to continue to the next page with a video.</p>',
+    choices: ['C']
+};
+
+// ask if pp understand the required task
+var continue_test_0 = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<p>Press \'C\' to continue to the next page with the first test trial.</p>',
+    choices: ['C']
+};
+var continue_test_1 = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<p>Press \'C\' to continue to the next page with the second test trial.</p>',
+    choices: ['C']
+};
+
+// build between blocks
+for (var i = 1; i < n_videos_per_participant * n_videos_repeat; i++) {
+    var videos_done = i;
+
+    if (videos_done === 10 || videos_done === 31) {
+        between_blocks.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '<div class="alert alert-primary" role="alert" style="text-align: left;"><h4 class="alert-heading">Break</h4><p>You have now completed ' + videos_done + ' videos out of ' + n_videos_per_participant * n_videos_repeat + '.</p><p>Please avoid moving around or changing your current position during the break.</p><hr><p class="mb-0">When ready press \'N\' to proceed to the next batch.</p></div>',
+            choices: ['N']
+        });
+    }
+}
+
+// questions after each stimulus
+var qs_video = {
+    type: jsPsychSurveyHtmlFormSlider,
+    preamble: 'Answer the questions about <strong>the white car(s)</strong> by moving the sliders. You will not be able to continue before moving all sliders.',
+    require_movement: true,
+    html: '<div id="jspsych-html-slider-response-wrapper" style="margin: 100px 0px;"><div id="jspsych-html-slider-response-stimulus">I felt <strong>comfortable</strong> about the behaviour of the white car(s).</div><div class="jspsych-html-slider-response-container" style="position:relative; margin: 0 auto 3em auto; width:1000px;" id="slider-0"><input type="range" name="slider-0" class="jspsych-slider" value="50" min="0" max="100" step="1" id="jspsych-html-slider-response-response"><div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(0% - (25% / 2) - -7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely<br>disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(25% - (25% / 2) - -3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(50% - (25% / 2) - 0px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Neither disagree<br>nor agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(75% - (25% / 2) - 3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(100% - (25% / 2) - 7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely<br>agree</span></div></div></div></div></div><div id="jspsych-html-slider-response-wrapper" style="margin: 100px 0px;"><div id="jspsych-html-slider-response-stimulus">The behaviour of the white car(s) made me feel <strong>unsafe</strong>.</div><div class="jspsych-html-slider-response-container" style="position:relative; margin: 0 auto 3em auto; width:1000px;" id="slider-1"><input type="range" name="slider-1" class="jspsych-slider" value="50" min="0" max="100" step="1" id="jspsych-html-slider-response-response"><div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(0% - (25% / 2) - -7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely<br>disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(25% - (25% / 2) - -3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(50% - (25% / 2) - 0px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Neither disagree<br>nor agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(75% - (25% / 2) - 3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(100% - (25% / 2) - 7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely<br>agree</span></div></div></div></div></div><div id="jspsych-html-slider-response-wrapper" style="margin: 100px 0px;"><div id="jspsych-html-slider-response-stimulus">The behaviour of the white car(s) was <strong>different</strong> from what I expected.</div><div class="jspsych-html-slider-response-container" style="position:relative; margin: 0 auto 3em auto; width:1000px;" id="slider-2"><input type="range" name="slider-2" class="jspsych-slider" value="50" min="0" max="100" step="1" id="jspsych-html-slider-response-response"><div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(0% - (25% / 2) - -7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely<br>disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(25% - (25% / 2) - -3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(50% - (25% / 2) - 0px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Neither disagree<br>nor agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(75% - (25% / 2) - 3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(100% - (25% / 2) - 7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely<br>agree</span></div></div></div></div></div>',
+    items: 3,
+};
+
+// build page with questions after the experiment
+var qs_end = {
+    type: jsPsychSurveyHtmlFormSlider,
+    preamble: 'Please answer the following questions based on your experience during the experiment by <strong>moving the sliders to the options</strong>.<br>You will not be able to continue before moving all sliders.',
+    require_movement: true,
+    html: '<div id="jspsych-html-slider-response-wrapper" style="margin: 20px 0px;"><div id="jspsych-html-slider-response-stimulus">When the automated cars are put into use, I will feel comfortable about driving on roads <strong>alongside</strong> automated cars.</div><div class="jspsych-html-slider-response-container" style="position:relative; margin: 0 auto 3em auto; width:1000px;" id="slider-0"><input type="range" name="slider-0" class="jspsych-slider" value="3" min="1" max="5" step="1" id="jspsych-html-slider-response-response"><div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(0% - (25% / 2) - -7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(25% - (25% / 2) - -3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(50% - (25% / 2) - 0px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Neither disagree nor agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(75% - (25% / 2) - 3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(100% - (25% / 2) - 7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely agree</span></div></div></div></div></div><div id="jspsych-html-slider-response-wrapper" style="margin: 60px 0px;"><div id="jspsych-html-slider-response-stimulus">When the automated cars are put into use, I will feel more comfortable about <strong>using</strong> an automated car instead of driving a manually driven car.</div><div class="jspsych-html-slider-response-container" style="position:relative; margin: 0 auto 3em auto; width:1000px;" id="slider-1"><input type="range" name="slider-1" class="jspsych-slider" value="3" min="1" max="5" step="1" id="jspsych-html-slider-response-response"><div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(0% - (25% / 2) - -7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(25% - (25% / 2) - -3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(50% - (25% / 2) - 0px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Neither disagree nor agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(75% - (25% / 2) - 3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(100% - (25% / 2) - 7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely agree</span></div></div></div></div></div><div id="jspsych-html-slider-response-wrapper" style="margin: 60px 0px;"><div id="jspsych-html-slider-response-stimulus">When the automated cars are put into use, I would like to have the automated cars to be <strong>recognisable as automated</strong>.</div><div class="jspsych-html-slider-response-container" style="position:relative; margin: 0 auto 3em auto; width:1000px;" id="slider-2"><input type="range" name="slider-2" class="jspsych-slider" value="3" min="1" max="5" step="1" id="jspsych-html-slider-response-response"><div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(0% - (25% / 2) - -7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(25% - (25% / 2) - -3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(50% - (25% / 2) - 0px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Neither disagree nor agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(75% - (25% / 2) - 3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(100% - (25% / 2) - 7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely agree</span></div></div></div></div></div><div id="jspsych-html-slider-response-wrapper" style="margin: 60px 0px;"><div id="jspsych-html-slider-response-stimulus">How I will <strong>feel</strong> about the other car(s) on the real road depends on whether the car(s) are automated or manual.</div><div class="jspsych-html-slider-response-container" style="position:relative; margin: 0 auto 3em auto; width:1000px;" id="slider-3"><input type="range" name="slider-3" class="jspsych-slider" value="3" min="1" max="5" step="1" id="jspsych-html-slider-response-response"><div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(0% - (25% / 2) - -7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(25% - (25% / 2) - -3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(50% - (25% / 2) - 0px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Neither disagree nor agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(75% - (25% / 2) - 3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(100% - (25% / 2) - 7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely agree</span></div></div></div></div></div><div id="jspsych-html-slider-response-wrapper" style="margin: 60px 0px;"><div id="jspsych-html-slider-response-stimulus">How I will <strong>behave</strong> towards the other car(s) on the real road depends on whether the car(s) are automated or manual.</div><div class="jspsych-html-slider-response-container" style="position:relative; margin: 0 auto 3em auto; width:1000px;" id="slider-4"><input type="range" name="slider-4" class="jspsych-slider" value="3" min="1" max="5" step="1" id="jspsych-html-slider-response-response"><div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(0% - (25% / 2) - -7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(25% - (25% / 2) - -3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Disagree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(50% - (25% / 2) - 0px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Neither disagree nor agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(75% - (25% / 2) - 3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Agree</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(100% - (25% / 2) - 7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Completely agree</span></div></div></div></div></div><div id="jspsych-html-slider-response-wrapper" style="margin: 60px 0px;"><div id="jspsych-html-slider-response-stimulus">Please indicate your general attitude towards automated cars.</div><div class="jspsych-html-slider-response-container" style="position:relative; margin: 0 auto 3em auto; width:1000px;" id="slider-5"><input type="range" name="slider-5" class="jspsych-slider" value="3" min="1" max="5" step="1" id="jspsych-html-slider-response-response"><div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(0% - (25% / 2) - -7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Very negative</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(25% - (25% / 2) - -3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Negative</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(50% - (25% / 2) - 0px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Neutral</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(75% - (25% / 2) - 3.75px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Positive</span></div></div><div style="border: 1px solid transparent; display: inline-block; position: absolute; left:calc(100% - (25% / 2) - 7.5px); text-align: center; width: 25%;"><span style="text-align: center; font-size: 80%;"><div class="slider-tick">|<br>Very positive</span></div></div></div></div></div>',
+    items: 6,
+};
+
+var camera_instructions = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+    <div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Configuration of camera</h1><p class="lead">In order to participate you must allow the experiment to use your camera. You will be prompted to do this on the next screen. If you do not wish to allow use of your camera, you cannot participate in this experiment. It may take up to 30 seconds for the camera to initialize after you give permission. No video recording from your camera will be saved. Only information about where you looked at the screen will be saved.<hr><p>Press \'C\' to proceed.</p></div></div>
+    `,
+    choices: ['C'],
+}
+
+var init_camera = {
+    type: jsPsychWebgazerInitCamera
+}
+
+var calibration_instructions = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+      <div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Calibration of eye tracker</h1><p class="lead">Now you will calibrate the eye tracking, so that the software can use the image of your eyes to predict where you are looking. You will see a series of dots appear on the screen. Look at each dot and click on it.<hr><p>Press \'C\' to proceed.</p></div></div>
+    `,
+    choices: ['C'],
+}
+
+var calibration = {
+    type: jsPsychWebgazerCalibrate,
+    calibration_points: [
+      [25,25],[75,25],[50,50],[25,75],[75,75]
+    ],
+    repetitions_per_point: calibration_num,
+    randomize_calibration_order: true
+}
+
+var validation_instructions = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+      <div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Accuracy of the calibration</h1><p class="lead">Now we will measure the accuracy of the calibration. Look at each dot as it appears on the screen. <span style="font-weight: bold;">You do not need to click on the dots this time.</span><hr><p>Press \'C\' to proceed.</p></div></div>
+    `,
+    choices: ['C'],
+    post_trial_gap: 1000
+}
+
+var validation = {
+    type: jsPsychWebgazerValidate,
+    validation_points: [
+        [25,25],[75,25],[50,50],[25,75],[75,75]
+    ],
+    roi_radius: 200,
+    time_to_saccade: 1000,
+    validation_duration: 2000,
+    data: {
+        task: 'validate'
+    }
+}
+
+var recalibrate_instructions = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+        <div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Insufficient accuracy of calibration</h1><p class="lead">The accuracy of the calibration is a lower than we would like. Let's try calibrating one more time. On the next screen, look at the dots and click on them.<hr><p>Press \'C\' to proceed.</p></div></div>
+    `,
+    choices: ['C'],
+}
+
+var recalibrate = {
+    timeline: [recalibrate_instructions, calibration, validation_instructions, validation],
+    conditional_function: function(){
+        var validation_data = jsPsych.data.get().filter({task: 'validate'}).values()[0];
+        return validation_data.percent_in_roi.some(function(x){
+            var minimum_percent_acceptable = 50;
+            return x < minimum_percent_acceptable;
+        });
+    },
+    data: {
+        phase: 'recalibration'
+    }
+}
+
+var calibration_done = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+        <div class="jumbotron jumbotron-fluid" style="text-align: left;"><div class="container"><h1 class="display-4">Calibration completed</h1><p class="lead">Calibration of eye tracking is complete, thank you for your patience. <hr><p>Press \'C\' to proceed to the instructions for the experiment.</p>
+    `,
+    choices: ['C'],
+}
+
+// block for sending data
+var save_data_block = {
+    type: jsPsychCallFunction,
+    func: function() {
+        saveData(); // save data
+    }
+}
+
+// enter full screen
+var fullscreen_enter = {
+    type: jsPsychFullscreen,
+    fullscreen_mode: true
+}
+
+// exit full screen
+var fullscreen_exit = {
+    type: jsPsychFullscreen,
+    fullscreen_mode: false
+}
+
+// create experiment timeline array
+var timeline = [];
+
+/* preload images */
+var preload = {
+  type: jsPsychPreload,
+  show_progress_bar: true,
+  auto_preload: true,
+  max_load_time: 3000000,
+  images: [image_pfefix + 'black_frame.png', 
+           image_pfefix + 'brightness_adjustment.jpg',
+           image_pfefix + 'drivers_view.jpg',
+           image_pfefix + 'ego_av_8500ms.jpg',
+           image_pfefix + 'ego_car_av.jpg',
+           image_pfefix + 'ego_mv_8500ms.jpg',
+           image_pfefix + 'red_cars.jpg',
+           image_pfefix + 'red_ego_av_8500ms.jpg',
+           image_pfefix + 'red_ego_mv_8500ms.jpg',
+           image_pfefix + 'white_av_ego_av_8500ms.jpg',
+           image_pfefix + 'white_av_ego_mv_8500ms.jpg',
+           image_pfefix + 'white_car_av.jpg',
+           image_pfefix + 'white_car.jpg',
+           image_pfefix + 'white_mv_ego_av_8500ms.jpg',
+           image_pfefix + 'white_mv_ego_mv_8500ms.jpg'
+          ],
+  video: video_preload,
+};
+timeline.push(preload);
+if (debug) {
+    console.log('preloading finished');
+}
+
+var between_blocks_count = 0;  // counter of shown between blocks
+timeline.push(fullscreen_enter);  // enter full screen
+if (eye_tracking) {  // toggle for using eye tracking
+    timeline.push(camera_instructions); 
+    timeline.push(init_camera); 
+    timeline.push(calibration_instructions); 
+    timeline.push(calibration); 
+    timeline.push(validation_instructions); 
+    timeline.push(validation); 
+    timeline.push(recalibrate);
+    timeline.push(calibration_done);
+    timeline.push(save_data_block);  // save data
+}
+// choose correct instructions page
+if (participant_group == 0) { // group 0
+    timeline.push(instructions_block_mv);  // instructions
+    timeline.push(continue_test_0);
+    timeline.push(image_block);  // page with an image asking to press the key
+    timeline.push(test_trial_mv_0); // test trial 0
+    timeline.push(qs_video);
+    timeline.push(save_data_block);  // save data
+    timeline.push(continue_test_1);
+    timeline.push(image_block);  // page with an image asking to press the key
+    timeline.push(test_trial_mv_1); // test trial 1
+    timeline.push(qs_video);
+    timeline.push(continue_session1_g0);
+} else if (participant_group == 1) { // group 1
+    timeline.push(instructions_block_mv);  // instructions
+    timeline.push(continue_test_0);
+    timeline.push(image_block);  // page with an image asking to press the key
+    timeline.push(test_trial_mv_0); // test trial 0
+    timeline.push(qs_video);
+    timeline.push(save_data_block);  // save data
+    timeline.push(continue_test_1);
+    timeline.push(image_block);  // page with an image asking to press the key
+    timeline.push(test_trial_mv_1); // test trial 1
+    timeline.push(qs_video);
+    timeline.push(continue_session1_g1);
+} else if (participant_group == 2) { // group 2
+    timeline.push(instructions_block_av);  // instructions
+    timeline.push(continue_test_0);
+    timeline.push(image_block);  // page with an image asking to press the key
+    timeline.push(test_trial_av_0); // test trial 0
+    timeline.push(qs_video);
+    timeline.push(save_data_block);  // save data
+    timeline.push(continue_test_1);
+    timeline.push(image_block);  // page with an image asking to press the key
+    timeline.push(test_trial_av_1); // test trial 1
+    timeline.push(qs_video);
+    timeline.push(continue_session1_g2);
+} else if (participant_group == 3) { // group 3
+    timeline.push(instructions_block_av);  // instructions
+    timeline.push(continue_test_0);
+    timeline.push(image_block);  // page with an image asking to press the key
+    timeline.push(test_trial_av_0); // test trial 0
+    timeline.push(qs_video);
+    timeline.push(save_data_block);  // save data
+    timeline.push(continue_test_1);
+    timeline.push(image_block);  // page with an image asking to press the key
+    timeline.push(test_trial_av_1); // test trial 1
+    timeline.push(qs_video);
+    timeline.push(continue_session1_g3);
+} else {
+    console.log('wrong participant_group of ', participant_group);
+}
+timeline.push(save_data_block);  // save data
+// iterate over blocks
+for (var i = 0; i < n_videos_per_participant * n_videos_repeat; i++) {
+    timeline.push(continue_block); // page to continue to next trial
+    timeline.push(image_block);  // page with an image asking to press the key
+    timeline.push(video_stimuli[i]);  // page with the stimulus
+    timeline.push(qs_video);
+    timeline.push(save_data_block);  // save data
+    if (i === n_videos_per_participant * n_videos_repeat / 2 - 1) {
+        // Insert the appropriate "continue" block for the current group
+        if (participant_group === 0) {
+            timeline.push(continue_session2_g0);
+        } else if (participant_group === 1) {
+            timeline.push(continue_session2_g1);
+        } else if (participant_group === 2) {
+            timeline.push(continue_session2_g2);
+        } else if (participant_group === 3) {
+            timeline.push(continue_session2_g3);
+        } else {
+            console.log('wrong participant_group of ', participant_group);
+        }
+    }
+}
+timeline.push(qs_end);  // questions in the end
+timeline.push(fullscreen_exit);  // exit full screen
+timeline.push(save_data_block);  // save data
+
+if (debug) {
+    console.log('timeline', timeline);
+    console.log('video_ids', video_ids);
+    console.log('video_stimuli', video_stimuli);
+    console.log('qs_video', qs_video);
+    console.log('between_blocks', between_blocks);
+}
+
+/* Start the experiment */
+jsPsych.run(timeline);
+
+</script>
+</html>
+ 
