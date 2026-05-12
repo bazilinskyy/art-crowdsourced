@@ -1,70 +1,76 @@
 var jsPsychMirrorCamera = (function (jspsych) {
   'use strict';
 
+  var version = "2.1.0";
+
   const info = {
-      name: "mirror-camera",
-      parameters: {
-          /** HTML to render below the video */
-          prompt: {
-              type: jspsych.ParameterType.HTML_STRING,
-              default: null,
-          },
-          /** Label to show on continue button */
-          button_label: {
-              type: jspsych.ParameterType.STRING,
-              default: "Continue",
-          },
-          /** Height of the video element */
-          height: {
-              type: jspsych.ParameterType.INT,
-              default: null,
-          },
-          /** Width of the video element */
-          width: {
-              type: jspsych.ParameterType.INT,
-              default: null,
-          },
-          /** Whether to flip the camera */
-          mirror_camera: {
-              type: jspsych.ParameterType.BOOL,
-              default: true,
-          },
+    name: "mirror-camera",
+    version,
+    parameters: {
+      /** HTML-formatted content to display below the camera feed. */
+      prompt: {
+        type: jspsych.ParameterType.HTML_STRING,
+        default: null
       },
-  };
-  /**
-   * **mirror-camera**
-   *
-   * jsPsych plugin for showing a live stream from a camera
-   *
-   * @author Josh de Leeuw
-   * @see {@link https://www.jspsych.org/plugins/jspsych-mirror-camera/ mirror-camera plugin documentation on jspsych.org}
-   */
-  class MirrorCameraPlugin {
-      constructor(jsPsych) {
-          this.jsPsych = jsPsych;
+      /** The label of the button to advance to the next trial. */
+      button_label: {
+        type: jspsych.ParameterType.STRING,
+        default: "Continue"
+      },
+      /** The height of the video playback element. If left `null` then it will match the size of the recording. */
+      height: {
+        type: jspsych.ParameterType.INT,
+        default: null
+      },
+      /** The width of the video playback element. If left `null` then it will match the size of the recording. */
+      width: {
+        type: jspsych.ParameterType.INT,
+        default: null
+      },
+      /**  Whether to mirror the video image. */
+      mirror_camera: {
+        type: jspsych.ParameterType.BOOL,
+        default: true
       }
-      trial(display_element, trial) {
-          this.stream = this.jsPsych.pluginAPI.getCameraStream();
-          display_element.innerHTML = `
+    },
+    data: {
+      /** The length of time the participant viewed the video playback. */
+      rt: {
+        type: jspsych.ParameterType.INT
+      }
+    },
+    // prettier-ignore
+    citations: {
+      "apa": "de Leeuw, J. R., Gilbert, R. A., & Luchterhandt, B. (2023). jsPsych: Enabling an Open-Source Collaborative Ecosystem of Behavioral Experiments. Journal of Open Source Software, 8(85), 5351. https://doi.org/10.21105/joss.05351 ",
+      "bibtex": '@article{Leeuw2023jsPsych, 	author = {de Leeuw, Joshua R. and Gilbert, Rebecca A. and Luchterhandt, Bj{\\" o}rn}, 	journal = {Journal of Open Source Software}, 	doi = {10.21105/joss.05351}, 	issn = {2475-9066}, 	number = {85}, 	year = {2023}, 	month = {may 11}, 	pages = {5351}, 	publisher = {Open Journals}, 	title = {jsPsych: Enabling an {Open}-{Source} {Collaborative} {Ecosystem} of {Behavioral} {Experiments}}, 	url = {https://joss.theoj.org/papers/10.21105/joss.05351}, 	volume = {8}, }  '
+    }
+  };
+  class MirrorCameraPlugin {
+    constructor(jsPsych) {
+      this.jsPsych = jsPsych;
+    }
+    static {
+      this.info = info;
+    }
+    trial(display_element, trial) {
+      this.stream = this.jsPsych.pluginAPI.getCameraStream();
+      display_element.innerHTML = `
       <video autoplay playsinline id="jspsych-mirror-camera-video" width="${trial.width ? trial.width : "auto"}" height="${trial.height ? trial.height : "auto"}" ${trial.mirror_camera ? 'style="transform: rotateY(180deg);"' : ""}></video>
       ${trial.prompt ? `<div id="jspsych-mirror-camera-prompt">${trial.prompt}</div>` : ""}
       <p><button class="jspsych-btn" id="btn-continue">${trial.button_label}</button></p>
     `;
-          display_element.querySelector("#jspsych-mirror-camera-video").srcObject =
-              this.stream;
-          display_element.querySelector("#btn-continue").addEventListener("click", () => {
-              this.finish(display_element);
-          });
-          this.start_time = performance.now();
-      }
-      finish(display_element) {
-          display_element.innerHTML = "";
-          this.jsPsych.finishTrial({
-              rt: performance.now() - this.start_time,
-          });
-      }
+      display_element.querySelector("#jspsych-mirror-camera-video").srcObject = this.stream;
+      display_element.querySelector("#btn-continue").addEventListener("click", () => {
+        this.finish(display_element);
+      });
+      this.start_time = performance.now();
+    }
+    finish(display_element) {
+      this.jsPsych.finishTrial({
+        rt: performance.now() - this.start_time
+      });
+    }
   }
-  MirrorCameraPlugin.info = info;
 
   return MirrorCameraPlugin;
 
