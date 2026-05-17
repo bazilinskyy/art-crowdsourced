@@ -332,13 +332,6 @@ var instructions_block = {
     }
 }
 
-// continue before showing the image
-var instructions_understood_block = {
-    type: jsPsychHtmlKeyboardResponse,
-    stimulus: '<p>Press \'C\' to continue to the next page with an image.</p>',
-    choices: ['C']
-};
-
 // blocks with stimuli
 images_preload = [];
 for (var i = 0; i < n_images_per_participant * n_images_repeat; i++) {
