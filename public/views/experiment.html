@@ -38,11 +38,11 @@
 // by Pavlo Bazilinskyy <p.bazilinskyy@tue.nl>
 
 // Constants
-var n_images_per_participant = 2; // number of images per participant
+var n_images_per_participant = 41; // number of images per participant
 var n_images_repeat = 1; // number of repeats of each condition
 var trial_duration = 5000; // amount of ms for showing an image stimulus
 var image_pfefix = 'img/'; // prefix for images
-var simulus_pfefix = 'img/stimuli/original/image_'; // prefix for videos
+var simulus_pfefix = 'img/stimuli/image_'; // prefix for videos
 var SHOW_DEBUG = false; // switch for debugging output
 var SAVE_DATA = true; // save data or not
 var EYE_TRACKING = true; // use eye_tracking or not
@@ -51,7 +51,6 @@ var CALIBRATION_NUM = 2; // how many times to calibrate eye tracking
 // Arrays
 var image_ids = []; // ids of stimuli
 var interactions = [];  // recorded browser interactions
-var between_blocks = []; // instructions between blocks
 var image_stimuli = []; // blocks with jsPsych stimuli pages
 
 // browser info
@@ -369,7 +368,7 @@ var continue_block = {
 };
 
 // questions after each stimulus
-var qs_video = {
+var qs_image = {
     type: jsPsychSurveyHtmlFormSlider,
     preamble: 'Answer the questions about <strong>the artwork that you just saw</strong> by moving the sliders. You will not be able to continue before moving all sliders.',
     require_movement: true,
@@ -494,7 +493,6 @@ if (debug) {
     console.log('preloading finished');
 }
 
-var between_blocks_count = 0;  // counter of shown between blocks
 timeline.push(fullscreen_enter);  // enter full screen
 if (eye_tracking) {  // toggle for using eye tracking
     timeline.push(camera_instructions); 
@@ -513,18 +511,17 @@ timeline.push(instructions_block);  // instructions
 for (var i = 0; i < n_images_per_participant * n_images_repeat; i++) {
     timeline.push(continue_block); // page to continue to next trial
     timeline.push(image_stimuli[i]);  // page with the stimulus
-    timeline.push(qs_video);
+    timeline.push(qs_image);
     timeline.push(save_data_block);  // save data
 }
 timeline.push(fullscreen_exit);  // exit full screen
-timeline.push(save_data_block);  // save data
+// timeline.push(save_data_block);  // save data
 
 if (debug) {
     console.log('timeline', timeline);
     console.log('image_ids', image_ids);
     console.log('image_stimuli', image_stimuli);
-    console.log('qs_video', qs_video);
-    console.log('between_blocks', between_blocks);
+    console.log('images_preload', images_preload);
 }
 
 /* Start the experiment */

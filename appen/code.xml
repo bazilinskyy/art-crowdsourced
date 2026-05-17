@@ -87,7 +87,7 @@
 </cml:radios>
 <cml:text label="If you answered 'Other' in the previous question, please describe your input device below."/>
 <p class="header">
-  <strong>Experiment on perception of art.</strong>
+  <strong>Experiment on perception of art</strong>
   <br/>
   In this experiment, you will see multiple images of artwork. Each image will be shown for 5 seconds and you will be asked to answer few questions about each image.
   <br/>
